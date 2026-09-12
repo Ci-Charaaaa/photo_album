@@ -11,7 +11,7 @@ public interface IAlbumRepository
     Task<Album?> GetUnclassifiedAsync();
 
     //CU'R'D操作
-    Task CreateAsync(Album album);
+    Task<Album> CreateAsync(Album album);
     Task UpdateAsync(Album album);
     Task<Album?> GetByIdAsync(long albumId);
     Task DeleteAsync(Album album);

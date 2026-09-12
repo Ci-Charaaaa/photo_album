@@ -14,8 +14,4 @@ public class Album
     public ICollection<Album> Children { get; set; } = [];
     public Photo? CoverPhoto { get; set; }
 
-
-
-
-
 }
