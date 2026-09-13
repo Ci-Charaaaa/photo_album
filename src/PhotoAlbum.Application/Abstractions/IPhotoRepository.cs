@@ -4,8 +4,8 @@ using PhotoAlbum.Domain.Entities;
 public interface IPhotoRepository
 {
    
-    //CU'R'D操作
-    Task CreateAsync(Photo photo);
+    //CURD操作（Create 返回带自增 Id 的实体，供上层拼照片文件名使用）
+    Task<Photo> CreateAsync(Photo photo);
     Task UpdateAsync(Photo photo);
     Task<Photo?> GetByIdAsync(long photoId);
     Task DeleteAsync(Photo photo);
@@ -16,6 +16,12 @@ public interface IPhotoRepository
 
     //查某相册下的所有关系（用于删除级联时逐条读IsPrimary）
     Task<IReadOnlyList<PhotoAlbumRelation>> GetRelationsByAlbumAsync(long albumId);
+
+    //查某照片的所有关系（用于删除照片时清除关系）
+    Task<IReadOnlyList<PhotoAlbumRelation>> GetRelationsByPhotoAsync(long photoId);
+
+    //根据照片的hash值查找照片（用于去重）
+    Task<Photo?> GetByHashAsync(string hash);
 
     //把照片的主相册从原来的改指到newAlbumId（包含未分类相册）
     Task ChangePrimaryAlbumAsync(long photoId, long newAlbumId);

@@ -20,59 +20,32 @@ public class AlbumService
         _storage = storage;
     }
 
-    //获取相册的祖先id列表，包括自己id，返回一个从根到叶子的id列表
-    private async Task<List<long>> GetAlbumAnceIdsAsync(Album album)
-    {
-        List<long> ancestorIds = new List<long>();
-        long? parentId = album.ParentId;
-        while (parentId != null)
-        {
-            Album? parentAlbum = await _albums.GetByIdAsync(parentId.Value);
-            if (parentAlbum != null)
-            {
-                ancestorIds.Add(parentAlbum.Id);
-                parentId = parentAlbum.ParentId;
-            }
-            else
-            {
-                throw new Exception($"Parent album with id {parentId} not found.");
-            }
-        }
-        //将祖先id列表反转，使其从根到叶子排列，并添加当前相册id
-        ancestorIds.Reverse();
-        ancestorIds.Add(album.Id);
-        return ancestorIds;
-    }
+    //四个用例：创建相册，重命名相册，修改备注，删除相册
 
-    //根据用户输入的名字和（可能存在的）当前相册创建相册的用例
+    //根据用户输入的名字和（可能存在的）当前父相册创建相册
     public async Task<Album> CreateAlbumAsync(string name, long? parentId) 
     {
-        //先创建一个相册实体
+        //先创建一个相册实体并入库，拿到自增id（目录以id命名，所以必须先写库）
         Album album = await _albums.CreateAsync(new Album { Name = name, ParentId = parentId });
 
-        //创建路径，父id列表的变量，获取相册的祖先id列表，包括自己id
-        string path = "";
-        List<long> ancestorIds = await GetAlbumAnceIdsAsync(album);;
-
-
-        //利用父id列表计算路径
-        path = _layout.AlbumDirectoryPath(ancestorIds);
+        //获取相册的祖先id列表，包括自己id，再算出目录路径
+        List<long> ancestorIds = await AlbumTree.GetAncestorIdsAsync(_albums, album);
+        string path = _layout.AlbumDirectoryPath(ancestorIds);
 
         //传路径创建dir
         await _storage.CreateDirectoryAsync(path);
 
-        //若发现创建失败则手动删除DB里的脏数据
-        if(!await _storage.ExistsAsync(path))
+        //若创建失败则手动删除DB里的脏数据（DB和文件系统不在同一事务）
+        if (!await _storage.ExistsAsync(path))
         {
             await _albums.DeleteAsync(album);
             throw new Exception($"Failed to create album directory at {path}. Album creation rolled back.");
         }
-        else
-            return album;
 
+        return album;
     }
 
-    //根据id查相册，查到直接更新名字，查不到抛异常
+    //根据id查相册，查到直接更新名字，查不到抛异常（目录以id命名，改名不动磁盘）
     public async Task RenameAlbumAsync(long albumId, string newName) 
     {
         Album? album = await _albums.GetByIdAsync(albumId);
@@ -92,8 +65,7 @@ public class AlbumService
         await _albums.UpdateAsync(album);
     }
 
-    //删除相册，先查找相册，查不到抛异常，查到则递归删除子相册，
-    //再删除照片关系，最后删除相册
+    //删除相册，先查找相册，查不到抛异常，查到则级联删除整棵子树
     public async Task DeleteAlbumAsync(long albumId) 
     {
         //查找相册，查不到抛异常
@@ -101,53 +73,54 @@ public class AlbumService
         if (album == null)
             throw new Exception($"Album with id {albumId} not found.");
 
-        var result = new List<(Album Album,List<long> Chain)>();
-
-        //获取相册及其所有子孙相册的列表，返回一个包含相册和其祖先id链的元组列表
-        await CollectSubtreeAsync(album, result);
-
-        var unclassified = await _albums.GetUnclassifiedAsync();
-        if(unclassified == null)
+        //拿到未分类相册作为主照片的落脚点
+        Album? unclassified = await _albums.GetUnclassifiedAsync();
+        if (unclassified == null)
             throw new Exception("Unclassified album not found.");
 
+        //获取相册及其所有子孙相册的列表，每个元素是"相册 + 自己的祖先id链"
+        var result = new List<(Album Album, List<long> Chain)>();
+        await CollectSubtreeAsync(album, result);
+
+        //处理每个相册里的照片：主照片回落未分类，附加照片只断关系
         foreach (var (subAlbum, chain) in result)
         {
-            //调取照片处理方法
             await DetachPhotosAsync(
                 subAlbum,
                 unclassified,
                 _layout.UnclassifiedDirectoryPath());
         }
 
-        //逆向删除相册及其子孙相册，先删除子孙相册，再删除父相册
+        //逆向删除目录和DB记录，先删子孙相册，再删父相册（自底向上）
         for (int i = result.Count - 1; i >= 0; i--)
         {
-            //删除子孙相册的目录，且一并清除缩略图
+            //删除相册的目录，且一并清除缩略图
             await _storage.DeleteDirectoryAsync(_layout.AlbumDirectoryPath(result[i].Chain));
-            //删除子孙相册的DB记录
+            //删除相册的DB记录
             await _albums.DeleteAsync(result[i].Album);
         }
-            
-
     }
 
-    //获取相册及其所有子孙相册的列表，返回一个包含相册和其祖先id链的元组列表
+
+
+    //两个私有的辅助方法：收集子孙相册，处理相册内照片
+
+    //递归获取相册及其所有子孙相册的列表，返回一个包含相册和其祖先id链的元组列表
     private async Task CollectSubtreeAsync(
-        Album album,                                                      
+        Album album,
         List<(Album Album, List<long> Chain)> result)
     {
         //添加自己和祖先id链到结果列表中
-        var chain = await GetAlbumAnceIdsAsync(album);   
+        var chain = await AlbumTree.GetAncestorIdsAsync(_albums, album);
         result.Add((album, chain));
 
         //递归获取子相册
         var children = await _albums.GetChildrenAsync(album.Id);
         foreach (var child in children)
-            await CollectSubtreeAsync(child, result);    
+            await CollectSubtreeAsync(child, result);
     }
 
-    //对相册内主照片进行转移到未分类相册的操作，传入当前相册，
-    //未分类相册，以及未分类相册的路径
+    //对相册内照片进行分流：主照片移到未分类，附加照片只删关系
     private async Task DetachPhotosAsync(
         Album album, 
         Album unclassified, 
@@ -155,38 +128,35 @@ public class AlbumService
     {
         long albumId = album.Id;
 
-        //先调取照片接口的关系查找方法，递归删除照片关系，
-        //若是主相册则转移到未分类相册，非主相册直接删除关系，最后删除相册
+        //先调取照片接口的关系查找方法
         var rel = await _photos.GetRelationsByAlbumAsync(albumId);
         foreach (PhotoAlbumRelation relation in rel)
         {
             if (relation.IsPrimary)
             {
-                //获得相册路径和照片名称
+                //拿到照片本体，查不到就跳过这条脏关系
                 var photo = await _photos.GetByIdAsync(relation.PhotoId);
                 if (photo == null)
-                    throw new Exception($"Photo with id {relation.PhotoId} not found.");
+                    continue;
 
-                string photoFileName = Path.GetFileName(photo.PhotoFilePath);
+                //文件名不变，只换目录：复用原路径里的文件名
+                string fileName = Path.GetFileName(photo.PhotoFilePath);
+                string newPath = Path.Combine(unclassifiedDir, fileName);
 
-                //物理移动文件(照片和缩略图)到未分类目录
-                await _storage.MoveFileAsync(photo.PhotoFilePath, Path.Combine(unclassifiedDir, Path.GetFileName(photo.PhotoFilePath)));
-                await _storage.MoveFileAsync(Path.Combine(_layout.ThumbnailPath(photo.PhotoFilePath)), Path.Combine(unclassifiedDir, "thumbnail", Path.GetFileName(photo.PhotoFilePath)));
+                //物理移动文件(照片和缩略图)到未分类目录，成功后才动DB
+                await _storage.MoveFileAsync(photo.PhotoFilePath, newPath);
+                await _storage.MoveFileAsync(_layout.ThumbnailPath(photo.PhotoFilePath), _layout.ThumbnailPath(newPath));
 
-                //DB上更改照片的主相册指向未分类相册
-                await _photos.ChangePrimaryAlbumAsync(relation.PhotoId, unclassified.Id);
-
-                //更新照片的DB
-                photo.PhotoFilePath = Path.Combine(unclassifiedDir, Path.GetFileName(photo.PhotoFilePath));
+                //更新照片路径，并把主相册改指未分类
+                photo.PhotoFilePath = newPath;
                 await _photos.UpdateAsync(photo);
+                await _photos.ChangePrimaryAlbumAsync(photo.Id, unclassified.Id);
             }
             else
             {
-                //删除非主相册的关系
+                //附加照片：只删除关系，物理文件不动
                 await _photos.RemoveRelationAsync(relation.PhotoId, albumId);
             }
         }
-
     }
-
 }

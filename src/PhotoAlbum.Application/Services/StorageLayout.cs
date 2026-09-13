@@ -25,6 +25,8 @@ public class StorageLayout : IStorageLayout
     //照片缩略图路径，通过照片路径拼接thumbnail目录和缩略图文件名组合成路径
     public string ThumbnailPath(string photoFilePath)
     {
-        return Path.Combine(Path.GetDirectoryName(photoFilePath), "thumbnail", Path.GetFileName(photoFilePath));
+        // GetDirectoryName 可能返回 null（当传入的是纯文件名时），用空串兜底避免可空警告
+        string directory = Path.GetDirectoryName(photoFilePath) ?? string.Empty;
+        return Path.Combine(directory, "thumbnail", Path.GetFileName(photoFilePath));
     }
 }
