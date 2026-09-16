@@ -13,9 +13,10 @@ public interface IStorageBackend
     public Task<bool> ExistsAsync(string path);
 
     // 文件是否存在，写入字节流，读取字节流（两个字节流用于缩略图读写）
+    // 注意：ReadBytesAsync 在文件不存在时返回 null（供缩略图缓存未命中判断）
     public Task<Stream> ReadFileAsync(string path);
     public Task WriteBytesAsync(string path, byte[] bytes);
-    public Task<byte[]> ReadBytesAsync(string path);
+    public Task<byte[]?> ReadBytesAsync(string path);
     
 
 
