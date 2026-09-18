@@ -1,0 +1,8 @@
+﻿本项目采用DI容器，即依赖注入实现解耦。
+
+Application层：三个用例注册到注册表中，IStorageLayout是本层就地实现，
+因此与StorageLayout组队注册进注册表。
+
+Infratructure层：分别将Application，Domain层的接口与本层内的实现一一
+映射然后注册到注册表中，共计三个用例，两个仓储以及文件后端操作；另本
+层内的Db上下文类也注册到表中。

@@ -15,6 +15,8 @@
 层间依赖和实现的具体关系是：Presentation层依赖于ViewModels层，ViewModels层依赖于Application层，Application层依赖于Domain层，Infrastructure层同时依赖Domain层和Application层。
 每一层都通过接口进行解耦，以便于后续的扩展和维护。
 
+注：具体技术细节建议参考docs/HS相册技术设计文档和docs/notes，建议多参考后者。
+
 项目代码为作者能工智人和人工智能共同完成（具体代码比例约为手写20%-30%，其余70%-80%为agent完成），且agent在决策和架构也提供了帮助。
 
 最后，恭喜你已经阅读完该文本喵！(≧▽≦)（居然真有人看吗）

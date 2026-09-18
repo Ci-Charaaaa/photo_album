@@ -38,14 +38,18 @@ public class MetadataExtractorExifService : IExifService
     //把所有目录的标签打包成一个"目录名 -> {标签名: 值}"的嵌套JSON
     private static string? BuildOtherInfoJson(IReadOnlyList<MetadataExtractor.Directory> directories)
     {
-        //此处的dir是元数据分组（Directory），每个dir里有若干标签（Tag），
+        //此处的dir是元数据分组（Directory），每个dir里有若干标签（Tag）和一个分组名，
         //每个标签有Name和Description，此处对元数据的列表挨个拆解拿exif内部的信息，
         //最终返回一个JSON字符串
         var map = new Dictionary<string, Dictionary<string, string>>();
 
+        //一条目录，包含若干tag，tag有标签名和Description
         foreach (var directory in directories)
         {
+            //该分组的内层字典：标签名 -> 描述
             var tags = new Dictionary<string, string>();
+
+            //遍历该目录的所有标签，
             foreach (var tag in directory.Tags)
             {
                 if (string.IsNullOrEmpty(tag.Description))

@@ -68,7 +68,7 @@ public class FileSystemStorageBackend : IStorageBackend
         string full = Resolve(path);
         return Task.FromResult(File.Exists(full) || Directory.Exists(full));
     }
-
+    
     //读取文件流（用于查看原图）
     public Task<Stream> ReadFileAsync(string path)
     {
