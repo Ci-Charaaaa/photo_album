@@ -7,23 +7,32 @@
         mc:Ignorable="d"
         x:Class="PhotoAlbum.Presentation.MainWindow"
         x:DataType="vm:MainViewModel"
-        Title="相册" Width="1000" Height="680"
-        d:DesignWidth="1000" d:DesignHeight="680">
+        Title="HS相册" Width="1000" Height="720"
+        d:DesignWidth="1000" d:DesignHeight="720">
 
     <Window.Resources>
         <conv:BytesToBitmapConverter x:Key="BytesToBitmap" />
     </Window.Resources>
 
-    <Grid ColumnDefinitions="260,4,*" Margin="8">
+    <Grid ColumnDefinitions="260,4,*" RowDefinitions="*,Auto" Margin="8">
 
-        <!-- 左侧：工具栏 + 相册树 -->
-        <DockPanel Grid.Column="0">
+        <!-- 左上：工具栏 + 相册树 -->
+        <DockPanel Grid.Row="0" Grid.Column="0">
             <StackPanel DockPanel.Dock="Top" Spacing="4" Margin="0,0,0,8">
+                <TextBlock Text="相册" FontWeight="Bold" Margin="0,0,0,2" />
                 <Button Content="全部照片" Command="{Binding ShowAllCommand}" HorizontalAlignment="Stretch" />
+                <Button Content="全部相册" Command="{Binding ShowAlbumsCommand}" HorizontalAlignment="Stretch" />
                 <Button Content="新建相册" Command="{Binding CreateAlbumCommand}" HorizontalAlignment="Stretch" />
-                <Button Content="重命名" Command="{Binding RenameAlbumCommand}" HorizontalAlignment="Stretch" />
+                <Button Content="重命名相册" Command="{Binding RenameAlbumCommand}" HorizontalAlignment="Stretch" />
+                <Button Content="相册备注" Command="{Binding UpdateAlbumRemarkCommand}" HorizontalAlignment="Stretch" />
                 <Button Content="删除相册" Command="{Binding DeleteAlbumCommand}" HorizontalAlignment="Stretch" />
+
+                <TextBlock Text="照片" FontWeight="Bold" Margin="0,8,0,2" />
+                <Button Content="查看原图" Command="{Binding ViewOriginalCommand}" HorizontalAlignment="Stretch" />
                 <Button Content="导入照片" Command="{Binding ImportPhotosCommand}" HorizontalAlignment="Stretch" />
+                <Button Content="重命名照片" Command="{Binding RenamePhotoCommand}" HorizontalAlignment="Stretch" />
+                <Button Content="照片备注" Command="{Binding UpdatePhotoRemarkCommand}" HorizontalAlignment="Stretch" />
+                <Button Content="移动照片" Command="{Binding MovePhotoCommand}" HorizontalAlignment="Stretch" />
                 <Button Content="删除照片" Command="{Binding DeletePhotoCommand}" HorizontalAlignment="Stretch" />
             </StackPanel>
 
@@ -31,36 +40,121 @@
                       SelectedItem="{Binding SelectedAlbum, Mode=TwoWay}">
                 <TreeView.ItemTemplate>
                     <TreeDataTemplate x:DataType="vm:AlbumNodeViewModel" ItemsSource="{Binding Children}">
-                        <TextBlock Text="{Binding Name}" />
+                        <StackPanel>
+                            <TextBlock Text="{Binding Name}" />
+                            <TextBlock Text="{Binding Remark}" FontSize="11" Foreground="Gray"
+                                       TextTrimming="CharacterEllipsis" />
+                        </StackPanel>
                     </TreeDataTemplate>
                 </TreeView.ItemTemplate>
             </TreeView>
         </DockPanel>
 
-        <GridSplitter Grid.Column="1" Background="#22000000" HorizontalAlignment="Stretch" />
+        <GridSplitter Grid.Row="0" Grid.Column="1" Background="#22000000" HorizontalAlignment="Stretch" />
 
-        <!-- 右侧：照片网格 -->
-        <ListBox Grid.Column="2"
-                 ItemsSource="{Binding Photos}"
-                 SelectedItem="{Binding SelectedPhoto, Mode=TwoWay}"
-                 Background="Transparent"
-                 ScrollViewer.HorizontalScrollBarVisibility="Disabled">
-            <ListBox.ItemsPanel>
-                <ItemsPanelTemplate>
-                    <WrapPanel />
-                </ItemsPanelTemplate>
-            </ListBox.ItemsPanel>
-            <ListBox.ItemTemplate>
-                <DataTemplate x:DataType="vm:PhotoItemViewModel">
-                    <StackPanel Width="150" Margin="6">
-                        <Border Background="#11000000" Height="130">
-                            <Image Source="{Binding Thumbnail, Converter={StaticResource BytesToBitmap}}"
-                                   Stretch="Uniform" />
-                        </Border>
-                        <TextBlock Text="{Binding Name}" TextWrapping="Wrap" FontSize="12" Margin="0,4,0,0" />
-                    </StackPanel>
-                </DataTemplate>
-            </ListBox.ItemTemplate>
-        </ListBox>
+        <!-- 右上：子相册条(上) + 照片/画廊(下) -->
+        <Grid Grid.Row="0" Grid.Column="2" RowDefinitions="Auto,Auto,*">
+
+            <!-- 返回上级（进入相册后显示） -->
+            <Button Grid.Row="0" Content="← 返回" Command="{Binding GoBackCommand}"
+                    IsVisible="{Binding CanGoBack}" HorizontalAlignment="Left" Margin="0,0,0,6" />
+
+            <!-- 子相册条：打开含子相册的相册时显示 -->
+            <ScrollViewer Grid.Row="1" MaxHeight="210" IsVisible="{Binding ShowChildAlbums}"
+                          VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                <ItemsControl ItemsSource="{Binding AlbumCards}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <WrapPanel />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:AlbumCardViewModel">
+                            <Button Command="{Binding OpenCommand}" Background="Transparent"
+                                    BorderThickness="0" Padding="0" Margin="6">
+                                <StackPanel Width="120">
+                                    <Border Background="#FF4A4A4A" Height="100">
+                                        <Image Source="{Binding Thumbnail, Converter={StaticResource BytesToBitmap}}"
+                                               Stretch="Uniform" />
+                                    </Border>
+                                    <TextBlock Text="{Binding Name}" TextWrapping="Wrap" FontSize="12" Margin="0,4,0,0" />
+                                </StackPanel>
+                            </Button>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+
+            <!-- 主区：照片 -->
+            <ListBox Grid.Row="2"
+                     ItemsSource="{Binding Photos}"
+                     SelectedItem="{Binding SelectedPhoto, Mode=TwoWay}"
+                     IsVisible="{Binding ShowPhotos}"
+                     DoubleTapped="OnPhotoDoubleTapped"
+                     Background="Transparent"
+                     ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                <ListBox.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <WrapPanel />
+                    </ItemsPanelTemplate>
+                </ListBox.ItemsPanel>
+                <ListBox.ItemTemplate>
+                    <DataTemplate x:DataType="vm:PhotoItemViewModel">
+                        <StackPanel Width="150" Margin="6">
+                            <Border Background="#11000000" Height="130">
+                                <Image Source="{Binding Thumbnail, Converter={StaticResource BytesToBitmap}}"
+                                       Stretch="Uniform" />
+                            </Border>
+                            <TextBlock Text="{Binding Name}" TextWrapping="Wrap" FontSize="12" Margin="0,4,0,0" />
+                            <TextBlock Text="{Binding Remark}" TextWrapping="Wrap" FontSize="11" Foreground="Gray"
+                                       MaxHeight="30" TextTrimming="CharacterEllipsis" />
+                        </StackPanel>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+
+            <!-- 主区：全部相册画廊 -->
+            <ScrollViewer Grid.Row="2" IsVisible="{Binding ShowGallery}"
+                          HorizontalScrollBarVisibility="Disabled">
+                <ItemsControl ItemsSource="{Binding AlbumCards}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <WrapPanel />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:AlbumCardViewModel">
+                            <Button Command="{Binding OpenCommand}" Background="Transparent"
+                                    BorderThickness="0" Padding="0" Margin="8">
+                                <StackPanel Width="160">
+                                    <Border Background="#FF4A4A4A" Height="140">
+                                        <Image Source="{Binding Thumbnail, Converter={StaticResource BytesToBitmap}}"
+                                               Stretch="Uniform" />
+                                    </Border>
+                                    <TextBlock Text="{Binding Name}" TextWrapping="Wrap" FontSize="13" Margin="0,4,0,0" />
+                                </StackPanel>
+                            </Button>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+        </Grid>
+
+        <!-- 底部：详情面板，显示当前选中相册/照片的备注 -->
+        <Border Grid.Row="1" Grid.ColumnSpan="3"
+                BorderBrush="#22000000" BorderThickness="0,1,0,0"
+                Padding="8" Margin="0,8,0,0">
+            <ScrollViewer MaxHeight="120">
+                <StackPanel Spacing="4">
+                    <TextBlock Text="{Binding SelectedAlbum.Name, StringFormat='相册：{0}'}" FontWeight="Bold" />
+                    <TextBlock Text="{Binding SelectedAlbum.Remark, StringFormat='相册备注：{0}'}"
+                               TextWrapping="Wrap" Foreground="#444444" />
+                    <TextBlock Text="{Binding SelectedPhoto.Name, StringFormat='照片：{0}'}"
+                               FontWeight="Bold" Margin="0,6,0,0" />
+                    <TextBlock Text="{Binding SelectedPhoto.Remark, StringFormat='照片备注：{0}'}"
+                               TextWrapping="Wrap" Foreground="#444444" />
+                </StackPanel>
+            </ScrollViewer>
+        </Border>
     </Grid>
 </Window>

@@ -19,6 +19,10 @@ public partial class AlbumNodeViewModel : ObservableObject
     [ObservableProperty]
     private string _name;
 
+    //相册备注（富文本，可观察）
+    [ObservableProperty]
+    private string? _remark;
+
     //是否展开
     [ObservableProperty]
     private bool _isExpanded;
@@ -36,5 +40,6 @@ public partial class AlbumNodeViewModel : ObservableObject
         Id = album.Id;
         ParentId = album.ParentId;
         _name = album.Name;
+        _remark = album.Remark;
     }
 }

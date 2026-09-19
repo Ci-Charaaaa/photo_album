@@ -6,8 +6,8 @@
     <Nullable>enable</Nullable>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <Version>0.1.0</Version>
-    <Product>PhotoAlbum</Product>
-    <AssemblyTitle>PhotoAlbum</AssemblyTitle>
+    <Product>HS相册</Product>
+    <AssemblyTitle>HS相册</AssemblyTitle>
   </PropertyGroup>
 
   <ItemGroup>

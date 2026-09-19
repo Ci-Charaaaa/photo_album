@@ -7,9 +7,9 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{827E0CD3-B72
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docs", "docs", "{7C2F5A10-9B4E-4D3A-8F6C-1A2B3C4D5E60}"
 	ProjectSection(SolutionItems) = preProject
-		README.md = README.md
-		docs\HS相册需求书.docx = docs\HS相册需求书.docx
 		docs\HS相册技术设计文档.docx = docs\HS相册技术设计文档.docx
+		docs\HS相册需求书.docx = docs\HS相册需求书.docx
+		README.md = README.md
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{4A7C9E12-6D3B-4F8A-9C2E-1B5D8F3A7C60}"
@@ -29,6 +29,9 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "notes", "notes", "{02EA681E-C7D8-13C7-8484-4AC65E1B71E8}"
 	ProjectSection(SolutionItems) = preProject
 		01Di容器.txt = 01Di容器.txt
+		03VM结构.txt = 03VM结构.txt
+		02MVVM结构.txt = 02MVVM结构.txt
+		04ORM.txt = 04ORM.txt
 	EndProjectSection
 EndProject
 Global

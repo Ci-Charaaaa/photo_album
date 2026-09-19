@@ -52,6 +52,7 @@ public partial class MainWindow : Window
         services.AddInfrastructure(root);
         services.AddSingleton<IDialogService>(new AvaloniaDialogService(this));
         services.AddSingleton<IFilePickerService>(new AvaloniaFilePickerService(this));
+        services.AddSingleton<IImageViewerService>(new AvaloniaImageViewerService(this));
         services.AddSingleton<MainViewModel>();
         _provider = services.BuildServiceProvider();
 
@@ -62,5 +63,12 @@ public partial class MainWindow : Window
         var vm = _provider.GetRequiredService<MainViewModel>();
         DataContext = vm;
         await vm.LoadCommand.ExecuteAsync(null);
+    }
+
+    //双击照片 -> 查看原图
+    private void OnPhotoDoubleTapped(object? sender, Avalonia.Input.TappedEventArgs e)
+    {
+        if (DataContext is MainViewModel vm)
+            vm.ViewOriginalCommand.Execute(null);
     }
 }

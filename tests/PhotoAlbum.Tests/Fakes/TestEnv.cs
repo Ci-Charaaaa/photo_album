@@ -16,7 +16,7 @@ public class TestEnv
 
     public AlbumService AlbumService => new(Albums, Photos, Layout, Storage);
     public PhotoImportService ImportService => new(Albums, Photos, Layout, Storage, Hash, Exif, Thumbnail);
-    public PhotoService PhotoService => new(Photos, Layout, Storage, Thumbnail);
+    public PhotoService PhotoService => new(Photos, Albums, Layout, Storage, Thumbnail);
 
     //种入未分类相册（Id=1）
     public Task<Album> SeedUnclassifiedAsync()

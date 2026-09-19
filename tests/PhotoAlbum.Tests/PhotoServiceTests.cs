@@ -73,4 +73,56 @@ public class PhotoServiceTests
         var second = await env.PhotoService.GetThumbnailAsync(photo);
         Assert.Equal(new byte[] { 42 }, second);
     }
+
+    //移动照片：文件+缩略图跟随移动，主关系改指目标相册
+    [Fact]
+    public async Task MovePhoto_MovesFileAndChangesPrimary()
+    {
+        var env = new TestEnv();
+        await env.SeedUnclassifiedAsync();
+        var a = await env.SeedAlbumAsync("A");
+        var b = await env.SeedAlbumAsync("B");
+        var photo = await env.SeedPhotoAsync(a, "p.jpg", primary: true, withThumbnail: true);
+
+        await env.PhotoService.MovePhotoAsync(photo.Id, b.Id);
+
+        // 主关系改指B
+        var rel = Assert.Single(await env.Photos.GetRelationsByPhotoAsync(photo.Id));
+        Assert.Equal(b.Id, rel.AlbumId);
+        Assert.True(rel.IsPrimary);
+
+        // 文件（原图+缩略图）移动到B目录，A目录下不再有
+        Assert.True(env.Storage.HasFileEndingWith($"albums/{b.Id}/p.jpg"));
+        Assert.True(env.Storage.HasFileEndingWith($"albums/{b.Id}/thumbnail/p.jpg"));
+        Assert.False(env.Storage.HasFileEndingWith($"albums/{a.Id}/p.jpg"));
+    }
+
+    //重命名照片：只改显示名，磁盘文件名不变
+    [Fact]
+    public async Task RenamePhoto_UpdatesNameOnly()
+    {
+        var env = new TestEnv();
+        var u = await env.SeedUnclassifiedAsync();
+        var photo = await env.SeedPhotoAsync(u, "p.jpg", primary: true);
+
+        await env.PhotoService.RenamePhotoAsync(photo.Id, "新名字");
+
+        var updated = await env.Photos.GetByIdAsync(photo.Id);
+        Assert.Equal("新名字", updated!.Name);
+        Assert.True(env.Storage.HasFileEndingWith("unclassified/p.jpg"));
+    }
+
+    //修改照片备注
+    [Fact]
+    public async Task UpdatePhotoRemark_UpdatesRemark()
+    {
+        var env = new TestEnv();
+        var u = await env.SeedUnclassifiedAsync();
+        var photo = await env.SeedPhotoAsync(u, "p.jpg", primary: true);
+
+        await env.PhotoService.UpdatePhotoRemarkAsync(photo.Id, "这是备注");
+
+        var updated = await env.Photos.GetByIdAsync(photo.Id);
+        Assert.Equal("这是备注", updated!.Remark);
+    }
 }

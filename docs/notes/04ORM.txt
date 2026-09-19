@@ -1,17 +1,51 @@
-﻿ORM,对象关系映射
-本项目采取EF CORE作为核心。
+﻿ORM（对象关系映射）
+本项目用 EF Core 作为 ORM，数据库用 SQLite（包：Microsoft.EntityFrameworkCore.Sqlite
+8.0.11）。
 
-在EF CORE中，ORM（对象关系映射）是一种将数据库中的表映射为对象的技术，
-使开发者可以使用面向对象的方式来操作数据库，而无需直接编写SQL语句。
+一、ORM / EF Core 是什么
+ORM 把数据库的表映射成 C# 对象，开发者用面向对象 + LINQ 操作数据，不必手写 SQL。
+EF Core 就是 .NET 的 ORM。本项目里，数据访问和持久化都Infrastructure层。
 
-在infrastructure层中，ORM主要用于数据访问和持久化操作。通过ORM，开发者可以定义实体类，
-这些实体类对应数据库中的表，并且可以通过LINQ查询来操作数据。
+二、实体即表结构（Code-First）
+领域层的实体（Album / Photo / PhotoAlbumRelation / Person）是纯 POCO
+（POCO：Plain Old C# Object。不依赖任何特定框架、没有特殊继承链的简单对象）
+本身不依赖 EF。
 
-同时，EF Core会提供Dbcontext作为上下文，Dbcontext是EF Core中用于与数据库进行交互的主要
-类。它负责管理实体对象的生命周期，
+EF 用反射读实体和导航属性，生成一份"模型"，再据此建表。映射细节写在 Infrastructure 的
+AppDbContext.OnModelCreating：
+表名：photo_set / photo / photo_album / person
+相册自引用：ParentId -> 同表 Id（Restrict，不级联）
+封面：CoverPhotoId -> photo.Id（SetNull）
+关系表两个外键 -> Cascade
+索引：photo.Hash（查重）、photo_album.AlbumId
+种子数据：内置"未分类"相册（Id=1）
+要点：实体在 Domain，映射在 Infrastructure——业务模型不依赖具体数据库技术（依赖倒置）。
 
-DI与ORM结合使用，可以实现更好的解耦和可测试性。通过依赖注入，开发者可以将Dbcontext注入到
-需要访问数据库的类中，从而实现对数据库操作的封装和管理。
+三、DbContext
+AppDbContext 是与数据库交互的核心：持有连接、模型、变更跟踪、待提交变更。
+构造函数接收 DbContextOptions（由 DI 用 UseSqlite(连接串) 配置，连接串里带 Foreign 
+Keys=True 开外键）
+DbSet<T> 暴露四张表
+生命周期必须是 Scoped（非线程安全、会跟踪对象）；所以 VM 每次操作开一个 scope 临时取用
 
+四、仓储（Repository）
+EfAlbumRepository / EfPhotoRepository 把 DbContext 包起来，实现 Application 定义的
+IAlbumRepository / IPhotoRepository，让上层完全不认识 EF。
+查询：LINQ（Where / OrderByDescending / Skip / Take），只读浏览用 AsNoTracking
+写入：Add / Update / Remove + SaveChangesAsync（每个写方法各自提交）
+CreateAsync 返回带自增 Id 的实体（EF 在 SaveChanges 后回填主键，供上层拼文件名用）
 
+五、变更跟踪
+从库查出的对象会被 DbContext 跟踪；改属性后调用 SaveChanges，EF 对比快照自动生成 UPDATE，
+不需要手动标记修改。
 
+六、迁移（Migrations）：数据库结构的版本管理
+1.InitialCreate 迁移文件记录"建表动作"；AppDbContextModelSnapshot 记录最新模型
+2.启动时 MigrateDatabaseAsync() 应用未执行的迁移：首次建库+写种子，之后增量升级保证不破坏数据
+3.改结构流程：改实体 / OnModelCreating -> dotnet ef migrations add xxx -> 启动自动应用
+另：DesignTimeDbContextFactory 供 dotnet ef 命令行工具在"设计时"创建 DbContext（设计时使用）
+
+七、与 DI 结合
+services.AddDbContext<AppDbContext>(opt => opt.UseSqlite(conn)) 注册上下文（默认 Scoped），
+仓储也注册为 Scoped；同一 scope 内共享同一个 DbContext，所以一次用例里的多处修改在同一套
+跟踪/连接里完成。
