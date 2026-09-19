@@ -29,6 +29,12 @@ public class EfAlbumRepository : IAlbumRepository
             .FirstOrDefaultAsync(a => a.Id == WellKnownIds.UnclassifiedAlbumId);
     }
 
+    //取全部相册（用于构建相册树）
+    public async Task<IReadOnlyList<Album>> GetAllAsync()
+    {
+        return await _db.Albums.ToListAsync();
+    }
+
     //创建相册并入库，返回带自增id的实体
     public async Task<Album> CreateAsync(Album album)
     {

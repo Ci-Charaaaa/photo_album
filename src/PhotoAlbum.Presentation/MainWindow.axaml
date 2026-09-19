@@ -2,8 +2,65 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+        xmlns:conv="clr-namespace:PhotoAlbum.Presentation.Converters"
+        xmlns:vm="clr-namespace:PhotoAlbum.ViewModels;assembly=PhotoAlbum.ViewModels"
+        mc:Ignorable="d"
         x:Class="PhotoAlbum.Presentation.MainWindow"
-        Title="PhotoAlbum.Presentation">
-    Welcome to Avalonia!
+        x:DataType="vm:MainViewModel"
+        Title="相册" Width="1000" Height="680"
+        d:DesignWidth="1000" d:DesignHeight="680">
+
+    <Window.Resources>
+        <conv:BytesToBitmapConverter x:Key="BytesToBitmap" />
+    </Window.Resources>
+
+    <Grid ColumnDefinitions="260,4,*" Margin="8">
+
+        <!-- 左侧：工具栏 + 相册树 -->
+        <DockPanel Grid.Column="0">
+            <StackPanel DockPanel.Dock="Top" Spacing="4" Margin="0,0,0,8">
+                <Button Content="全部照片" Command="{Binding ShowAllCommand}" HorizontalAlignment="Stretch" />
+                <Button Content="新建相册" Command="{Binding CreateAlbumCommand}" HorizontalAlignment="Stretch" />
+                <Button Content="重命名" Command="{Binding RenameAlbumCommand}" HorizontalAlignment="Stretch" />
+                <Button Content="删除相册" Command="{Binding DeleteAlbumCommand}" HorizontalAlignment="Stretch" />
+                <Button Content="导入照片" Command="{Binding ImportPhotosCommand}" HorizontalAlignment="Stretch" />
+                <Button Content="删除照片" Command="{Binding DeletePhotoCommand}" HorizontalAlignment="Stretch" />
+            </StackPanel>
+
+            <TreeView ItemsSource="{Binding AlbumTree}"
+                      SelectedItem="{Binding SelectedAlbum, Mode=TwoWay}">
+                <TreeView.ItemTemplate>
+                    <TreeDataTemplate x:DataType="vm:AlbumNodeViewModel" ItemsSource="{Binding Children}">
+                        <TextBlock Text="{Binding Name}" />
+                    </TreeDataTemplate>
+                </TreeView.ItemTemplate>
+            </TreeView>
+        </DockPanel>
+
+        <GridSplitter Grid.Column="1" Background="#22000000" HorizontalAlignment="Stretch" />
+
+        <!-- 右侧：照片网格 -->
+        <ListBox Grid.Column="2"
+                 ItemsSource="{Binding Photos}"
+                 SelectedItem="{Binding SelectedPhoto, Mode=TwoWay}"
+                 Background="Transparent"
+                 ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+            <ListBox.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <WrapPanel />
+                </ItemsPanelTemplate>
+            </ListBox.ItemsPanel>
+            <ListBox.ItemTemplate>
+                <DataTemplate x:DataType="vm:PhotoItemViewModel">
+                    <StackPanel Width="150" Margin="6">
+                        <Border Background="#11000000" Height="130">
+                            <Image Source="{Binding Thumbnail, Converter={StaticResource BytesToBitmap}}"
+                                   Stretch="Uniform" />
+                        </Border>
+                        <TextBlock Text="{Binding Name}" TextWrapping="Wrap" FontSize="12" Margin="0,4,0,0" />
+                    </StackPanel>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
+    </Grid>
 </Window>
