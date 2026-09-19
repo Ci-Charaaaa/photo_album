@@ -145,7 +145,11 @@ public class AlbumService
 
                 //物理移动文件(照片和缩略图)到未分类目录，成功后才动DB
                 await _storage.MoveFileAsync(photo.PhotoFilePath, newPath);
-                await _storage.MoveFileAsync(_layout.ThumbnailPath(photo.PhotoFilePath), _layout.ThumbnailPath(newPath));
+
+                //缩略图可能不存在（生成失败等），存在才移动，避免中断删除
+                string oldThumbnail = _layout.ThumbnailPath(photo.PhotoFilePath);
+                if (await _storage.ExistsAsync(oldThumbnail))
+                    await _storage.MoveFileAsync(oldThumbnail, _layout.ThumbnailPath(newPath));
 
                 //更新照片路径，并把主相册改指未分类
                 photo.PhotoFilePath = newPath;

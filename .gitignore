@@ -482,3 +482,7 @@ $RECYCLE.BIN/
 
 # Vim temporary swap files
 *.swp
+
+# 本项目：发布/打包产物
+publish/
+installer/output/

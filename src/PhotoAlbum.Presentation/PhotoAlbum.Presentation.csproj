@@ -5,6 +5,9 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <Version>0.1.0</Version>
+    <Product>PhotoAlbum</Product>
+    <AssemblyTitle>PhotoAlbum</AssemblyTitle>
   </PropertyGroup>
 
   <ItemGroup>
