@@ -1,0 +1,50 @@
+﻿# CD（持续交付）：推送 v* 标签时，自动"发布 + 打包安装包 + 建Release"
+# 用法：改好版本后，git tag v0.2.0 && git push origin v0.2.0
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'          # 只在形如 v0.1.0 / v1.2.3 的标签上触发
+
+# 创建Release需要写权限
+permissions:
+  contents: write
+
+jobs:
+  installer:
+    # 自包含win-x64 + Inno Setup都需要Windows
+    runs-on: windows-latest
+
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 安装 .NET 8（并缓存 NuGet）
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+          cache: true
+          cache-dependency-path: '**/*.csproj'
+
+      - name: 运行测试（发布前先验货）
+        run: dotnet test tests/PhotoAlbum.Tests/PhotoAlbum.Tests.csproj -c Release
+
+      - name: 安装 Inno Setup
+        #windows runner自带Chocolatey；装完ISCC.exe在"C:\Program Files (x86)\Inno Setup 6\"
+        run: choco install innosetup --no-progress -y
+
+      - name: 发布并打包（版本取自tag）
+        shell: pwsh
+        run: |
+          # github.ref_name 形如 v0.2.0，去掉开头的 v 得到 0.2.0
+          $version = "${{ github.ref_name }}".TrimStart('v')
+          Write-Host "本次发布版本: $version"
+          # 复用仓库里的一键脚本：同步版本 -> dotnet publish -> Inno Setup 编译
+          .\build-release.ps1 -Version $version
+
+      - name: 创建 Release 并上传安装包
+        uses: softprops/action-gh-release@v2
+        with:
+          files: installer/output/PhotoAlbum-Setup-*.exe
+          generate_release_notes: true    # 自动根据提交生成发布说明

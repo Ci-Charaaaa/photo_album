@@ -1,10 +1,16 @@
+<!--
+    App.axaml —— 应用级 XAML。
+    这里放"全局"的东西：主题、全局样式、全局资源等。
+    它对应 App.axaml.cs 里的 App 类（x:Class 指定）。
+-->
 <Application xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="PhotoAlbum.Presentation.App"
              RequestedThemeVariant="Default">
-             <!-- "Default" ThemeVariant follows system theme variant. "Dark" or "Light" are other available options. -->
+             <!-- RequestedThemeVariant：Default=跟随系统主题；也可写 Dark / Light -->
 
     <Application.Styles>
+        <!-- FluentTheme：微软 Fluent 风格的默认控件样式（按钮/列表/树等长什么样） -->
         <FluentTheme />
     </Application.Styles>
 </Application>

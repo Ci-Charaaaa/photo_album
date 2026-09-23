@@ -1,0 +1,38 @@
+﻿# CI（持续集成）：每次push/PR自动"编译 + 跑测试"
+# 目的：尽早发现"改坏了"，红了就拦住，逼你修好再合并。
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-test:
+    # 编译和测试不需要Windows，用ubuntu更快更省
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 安装 .NET 8（并缓存 NuGet）
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+          cache: true
+          cache-dependency-path: '**/*.csproj'
+
+      - name: 还原依赖
+        run: dotnet restore PhotoAlbum.sln
+
+      - name: 编译（Release）
+        run: dotnet build PhotoAlbum.sln -c Release --no-restore
+
+      - name: 运行测试
+        run: dotnet test tests/PhotoAlbum.Tests/PhotoAlbum.Tests.csproj -c Release --no-build
+
+      #代码格式检查（先跑dotnet format把风格统一后再打开，否则会因风格问题变红）
+      - name: 检查代码格式
+        run: dotnet format PhotoAlbum.sln --verify-no-changes --no-restore

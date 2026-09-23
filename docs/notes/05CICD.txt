@@ -1,0 +1,9 @@
+﻿CI是持续集成（Continuous Integration）
+CD是持续交付 / 持续部署（Continuous Delivery / Deployment）
+
+CI与CD通过.github的cl.yml与release.yml实现
+
+它们本质上是再github上构建虚拟机对提交自动进行测试和自动打包提交的内容发布release
+
+而cl.yml与release.yml实际上就是规定执行测试和执行打包的虚拟机的环境，配置，导入依
+赖，命名，版本号生成的规则。

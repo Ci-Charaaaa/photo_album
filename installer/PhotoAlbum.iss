@@ -5,7 +5,7 @@
 ;   2) 用 Inno Setup 打开本文件并编译（Compile），产物输出到 installer\output\PhotoAlbum-Setup-0.1.0.exe
 
 #define MyAppName "HS相册"
-#define MyAppVersion "0.1.0"
+#define MyAppVersion "0.2.0"
 #define MyAppPublisher "闰土"
 #define MyAppExeName "PhotoAlbum.Presentation.exe"
 

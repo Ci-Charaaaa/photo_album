@@ -6,3 +6,28 @@ Application层：三个用例注册到注册表中，IStorageLayout是本层就�
 Infratructure层：分别将Application，Domain层的接口与本层内的实现一一
 映射然后注册到注册表中，共计三个用例，两个仓储以及文件后端操作；另本
 层内的Db上下文类也注册到表中。
+
+ViewModel层：共计三个用例与一个主视图模型；三个用例定义在VM层，注册在
+presetation层的MainWindow，同时在另一个类内被实现；VM层的主视图模型中
+只调用服务用例，由DI容器把Presetation层中的实现传递给V每层。
+
+DI容器的流程：在程序启动时，先注册各层的接口与实现到DI容器中，然后在需
+要使用的地方通过构造函数注入所需的接口，DI容器会自动解析并提供对应的实现。
+
+eg：用户点"导入照片"
+  1.View通过数据绑定调用VM.ImportPhotosCommand
+  2.MainViewModel.ImportPhotosAsync 开始执行
+  3.VM调IFilePickerService.PickPhotoFilesAsync()弹文件选择框（取消则结束）
+  4.VM用IServiceScopeFactory.CreateScope()开一个作用域
+  5.从scope的provider的GetRequiredService<PhotoImportService>()
+      （此刻容器按注册表反射构造它：递归解析构造函数参数并注入到实现中）
+  6.对每个文件：CheckDuplicateAsync 查重（重复则弹确认框）→ ImportAsync
+      （把实现导入服务内部，再用这些实现，比如IStorageBackend去搬文件、仓
+      储写库、IThumbnailService去生成缩略图）
+  7.using 结束，释放 scope
+  8.VM 显式调ReloadCurrentViewAsync()：再开scope查询 → 投影成VM对象 → 更新Photos集合
+  9.可观察属性/集合发通知 → 数据绑定引擎让View刷新
+  10.结束
+
+DI容器的作用是把各层的接口与实现解耦，降低了各层之间的依赖关系，使得代
+码更加灵活和可维护。

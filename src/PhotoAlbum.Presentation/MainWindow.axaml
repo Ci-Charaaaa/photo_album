@@ -1,3 +1,14 @@
+<!--
+    MainWindow.axaml —— 主界面。
+    XAML 是"声明式"的：只描述界面长什么样、绑定到 VM 的哪些属性/命令，
+    不写业务逻辑。数据靠 {Binding ...} 与 MainViewModel 关联（DataContext 在代码里设为 MainViewModel）。
+
+    两个命名空间要记住：
+      xmlns:vm  —— 引用 ViewModels 程序集，用于 x:DataType 声明"当前绑定的数据类型"
+      xmlns:conv—— 引用本项目的值转换器（把 byte[] 转成图片）
+    x:DataType="vm:MainViewModel"：开启"编译期绑定"——绑定会在编译时检查，
+      写错属性名会编译报错（比运行期才发现强）。
+-->
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -11,13 +22,16 @@
         d:DesignWidth="1000" d:DesignHeight="720">
 
     <Window.Resources>
+        <!-- 注册转换器，取个 Key，下面用 {StaticResource BytesToBitmap} 引用 -->
         <conv:BytesToBitmapConverter x:Key="BytesToBitmap" />
     </Window.Resources>
 
+    <!-- 整体布局：左列(树) | 分隔条 | 右列(内容)；下面一行(详情面板) -->
     <Grid ColumnDefinitions="260,4,*" RowDefinitions="*,Auto" Margin="8">
 
         <!-- 左上：工具栏 + 相册树 -->
         <DockPanel Grid.Row="0" Grid.Column="0">
+            <!-- 工具栏：按钮的 Command 绑定到 VM 的命令（点按钮 = 执行 VM 方法） -->
             <StackPanel DockPanel.Dock="Top" Spacing="4" Margin="0,0,0,8">
                 <TextBlock Text="相册" FontWeight="Bold" Margin="0,0,0,2" />
                 <Button Content="全部照片" Command="{Binding ShowAllCommand}" HorizontalAlignment="Stretch" />
@@ -36,12 +50,20 @@
                 <Button Content="删除照片" Command="{Binding DeletePhotoCommand}" HorizontalAlignment="Stretch" />
             </StackPanel>
 
+            <!--
+                相册树。
+                ItemsSource=根节点集合；SelectedItem 双向绑定到 VM.SelectedAlbum：
+                  用户点树 -> VM.SelectedAlbum 变 -> VM 重新加载视图；
+                  VM 里改 SelectedAlbum -> 树上选中项也跟着变。
+                TreeDataTemplate 的 ItemsSource="{Binding Children}"：告诉 TreeView 子节点从哪来（递归成树）。
+            -->
             <TreeView ItemsSource="{Binding AlbumTree}"
                       SelectedItem="{Binding SelectedAlbum, Mode=TwoWay}">
                 <TreeView.ItemTemplate>
                     <TreeDataTemplate x:DataType="vm:AlbumNodeViewModel" ItemsSource="{Binding Children}">
                         <StackPanel>
                             <TextBlock Text="{Binding Name}" />
+                            <!-- 备注作为灰色小字第二行，长了就省略号 -->
                             <TextBlock Text="{Binding Remark}" FontSize="11" Foreground="Gray"
                                        TextTrimming="CharacterEllipsis" />
                         </StackPanel>
@@ -50,22 +72,27 @@
             </TreeView>
         </DockPanel>
 
+        <!-- 可拖动的竖直分隔条（左右宽度可调） -->
         <GridSplitter Grid.Row="0" Grid.Column="1" Background="#22000000" HorizontalAlignment="Stretch" />
 
-        <!-- 右上：子相册条(上) + 照片/画廊(下) -->
+        <!-- 右上：三行 —— 返回键 / 子相册条 / 主区 -->
         <Grid Grid.Row="0" Grid.Column="2" RowDefinitions="Auto,Auto,*">
 
-            <!-- 返回上级（进入相册后显示） -->
+            <!-- 返回上级：只有"在相册内"时才可见（绑定 CanGoBack） -->
             <Button Grid.Row="0" Content="← 返回" Command="{Binding GoBackCommand}"
                     IsVisible="{Binding CanGoBack}" HorizontalAlignment="Left" Margin="0,0,0,6" />
 
-            <!-- 子相册条：打开含子相册的相册时显示 -->
+            <!--
+                子相册条：打开"含子相册的相册"时显示（绑定 ShowChildAlbums）。
+                相册卡片用 ItemsControl（不用 ListBox，因为不需要"选中"）：
+                每个卡片是一个 Button，命令直接用卡片自己的 OpenCommand（点卡片=打开该相册）。
+            -->
             <ScrollViewer Grid.Row="1" MaxHeight="210" IsVisible="{Binding ShowChildAlbums}"
                           VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                 <ItemsControl ItemsSource="{Binding AlbumCards}">
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate>
-                            <WrapPanel />
+                            <WrapPanel />   <!-- 横向排列，排不下自动换行 -->
                         </ItemsPanelTemplate>
                     </ItemsControl.ItemsPanel>
                     <ItemsControl.ItemTemplate>
@@ -73,6 +100,7 @@
                             <Button Command="{Binding OpenCommand}" Background="Transparent"
                                     BorderThickness="0" Padding="0" Margin="6">
                                 <StackPanel Width="120">
+                                    <!-- 深灰底：没有封面照片时露出它，就是"深灰空置" -->
                                     <Border Background="#FF4A4A4A" Height="100">
                                         <Image Source="{Binding Thumbnail, Converter={StaticResource BytesToBitmap}}"
                                                Stretch="Uniform" />
@@ -85,7 +113,11 @@
                 </ItemsControl>
             </ScrollViewer>
 
-            <!-- 主区：照片 -->
+            <!--
+                主区：照片网格。
+                ListBox 支持"选中"，SelectedItem 双向绑定到 VM.SelectedPhoto（删除/重命名等要用）。
+                DoubleTapped 事件在代码里转成"查看原图"命令。
+            -->
             <ListBox Grid.Row="2"
                      ItemsSource="{Binding Photos}"
                      SelectedItem="{Binding SelectedPhoto, Mode=TwoWay}"
@@ -113,7 +145,10 @@
                 </ListBox.ItemTemplate>
             </ListBox>
 
-            <!-- 主区：全部相册画廊 -->
+            <!--
+                主区（切换）：全部相册画廊。
+                与照片网格占同一格(Row=2)，通过 IsVisible 互斥切换（同一时刻只显示一个）。
+            -->
             <ScrollViewer Grid.Row="2" IsVisible="{Binding ShowGallery}"
                           HorizontalScrollBarVisibility="Disabled">
                 <ItemsControl ItemsSource="{Binding AlbumCards}">
@@ -140,7 +175,10 @@
             </ScrollViewer>
         </Grid>
 
-        <!-- 底部：详情面板，显示当前选中相册/照片的备注 -->
+        <!--
+            底部详情面板：显示当前选中相册/照片的备注。
+            用 StringFormat 在绑定值前加前缀；跨三列(Row=1, ColumnSpan=3)。
+        -->
         <Border Grid.Row="1" Grid.ColumnSpan="3"
                 BorderBrush="#22000000" BorderThickness="0,1,0,0"
                 Padding="8" Margin="0,8,0,0">
