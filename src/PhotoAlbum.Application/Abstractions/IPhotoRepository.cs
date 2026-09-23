@@ -3,7 +3,7 @@ using PhotoAlbum.Domain.Entities;
 
 public interface IPhotoRepository
 {
-   
+
     //CURD操作（Create 返回带自增 Id 的实体，供上层拼照片文件名使用）
     Task<Photo> CreateAsync(Photo photo);
     Task UpdateAsync(Photo photo);

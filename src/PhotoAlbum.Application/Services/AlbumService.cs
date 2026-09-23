@@ -1,4 +1,4 @@
-﻿namespace PhotoAlbum.Application.Services; 
+﻿namespace PhotoAlbum.Application.Services;
 using PhotoAlbum.Application.Abstractions;
 using PhotoAlbum.Domain.Entities;
 using PhotoAlbum.Domain.Interfaces;
@@ -23,7 +23,7 @@ public class AlbumService
     //四个用例：创建相册，重命名相册，修改备注，删除相册
 
     //根据用户输入的名字和（可能存在的）当前父相册创建相册
-    public async Task<Album> CreateAlbumAsync(string name, long? parentId) 
+    public async Task<Album> CreateAlbumAsync(string name, long? parentId)
     {
         //先创建一个相册实体并入库，拿到自增id（目录以id命名，所以必须先写库）
         Album album = await _albums.CreateAsync(new Album { Name = name, ParentId = parentId });
@@ -46,7 +46,7 @@ public class AlbumService
     }
 
     //根据id查相册，查到直接更新名字，查不到抛异常（目录以id命名，改名不动磁盘）
-    public async Task RenameAlbumAsync(long albumId, string newName) 
+    public async Task RenameAlbumAsync(long albumId, string newName)
     {
         Album? album = await _albums.GetByIdAsync(albumId);
         if (album == null)
@@ -56,7 +56,7 @@ public class AlbumService
     }
 
     //同上，只是名字换成备注
-    public async Task UpdateAlbumRemarkAsync(long albumId, string remark) 
+    public async Task UpdateAlbumRemarkAsync(long albumId, string remark)
     {
         Album? album = await _albums.GetByIdAsync(albumId);
         if (album == null)
@@ -66,7 +66,7 @@ public class AlbumService
     }
 
     //删除相册，先查找相册，查不到抛异常，查到则级联删除整棵子树
-    public async Task DeleteAlbumAsync(long albumId) 
+    public async Task DeleteAlbumAsync(long albumId)
     {
         //查找相册，查不到抛异常
         Album? album = await _albums.GetByIdAsync(albumId);
@@ -122,8 +122,8 @@ public class AlbumService
 
     //对相册内照片进行分流：主照片移到未分类，附加照片只删关系
     private async Task DetachPhotosAsync(
-        Album album, 
-        Album unclassified, 
+        Album album,
+        Album unclassified,
         string unclassifiedDir)
     {
         long albumId = album.Id;

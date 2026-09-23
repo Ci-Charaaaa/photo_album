@@ -9,7 +9,7 @@ public interface IStorageBackend
 
     // 文件删除，文件移动，读取文件流（用于照片读）
     public Task DeleteFileAsync(string path);
-    public Task MoveFileAsync(string src,string dst);
+    public Task MoveFileAsync(string src, string dst);
     public Task<bool> ExistsAsync(string path);
 
     // 文件是否存在，写入字节流，读取字节流（两个字节流用于缩略图读写）
@@ -17,11 +17,11 @@ public interface IStorageBackend
     public Task<Stream> ReadFileAsync(string path);
     public Task WriteBytesAsync(string path, byte[] bytes);
     public Task<byte[]?> ReadBytesAsync(string path);
-    
 
 
 
-       
+
+
 
 
 

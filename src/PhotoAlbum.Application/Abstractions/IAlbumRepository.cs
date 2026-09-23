@@ -3,7 +3,7 @@ using PhotoAlbum.Domain.Entities;
 
 public interface IAlbumRepository
 {
-    
+
     //根据父相册id查只读的子相册列表
     Task<IReadOnlyList<Album>> GetChildrenAsync(long parentId);
 
