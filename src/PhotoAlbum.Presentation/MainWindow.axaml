@@ -48,6 +48,8 @@
                 <Button Content="照片备注" Command="{Binding UpdatePhotoRemarkCommand}" HorizontalAlignment="Stretch" />
                 <Button Content="移动照片" Command="{Binding MovePhotoCommand}" HorizontalAlignment="Stretch" />
                 <Button Content="删除照片" Command="{Binding DeletePhotoCommand}" HorizontalAlignment="Stretch" />
+                <Button Content="批量移动" Command="{Binding MoveSelectedPhotosCommand}" HorizontalAlignment="Stretch" />
+                <Button Content="批量删除" Command="{Binding DeleteSelectedPhotosCommand}" HorizontalAlignment="Stretch" />
             </StackPanel>
 
             <!--
@@ -115,12 +117,15 @@
 
             <!--
                 主区：照片网格。
-                ListBox 支持"选中"，SelectedItem 双向绑定到 VM.SelectedPhoto（删除/重命名等要用）。
-                DoubleTapped 事件在代码里转成"查看原图"命令。
+                SelectionMode=Multiple：支持 Ctrl/Shift 多选；框选由代码里的指针事件处理。
+                SelectionChanged：选中变化时把 ListBox 的选中项同步进 VM.SelectedPhotos（供批量操作）。
             -->
-            <ListBox Grid.Row="2"
+            <ListBox x:Name="PhotoList"
+                     Grid.Row="2"
                      ItemsSource="{Binding Photos}"
                      SelectedItem="{Binding SelectedPhoto, Mode=TwoWay}"
+                     SelectionMode="Multiple"
+                     SelectionChanged="OnPhotoSelectionChanged"
                      IsVisible="{Binding ShowPhotos}"
                      DoubleTapped="OnPhotoDoubleTapped"
                      Background="Transparent"
@@ -173,6 +178,15 @@
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
             </ScrollViewer>
+
+            <!--
+                框选矩形覆盖层：IsHitTestVisible=False 表示它不接收鼠标事件（只负责画）。
+                按住右键拖拽时，代码在这里画一个矩形，并算出被框住的照片。
+            -->
+            <Canvas Grid.Row="2" x:Name="SelectionCanvas" IsHitTestVisible="False">
+                <Rectangle x:Name="SelectionRect" IsVisible="False"
+                           Fill="#33007ACC" Stroke="#FF007ACC" StrokeThickness="1" />
+            </Canvas>
         </Grid>
 
         <!--

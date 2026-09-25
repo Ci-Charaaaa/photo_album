@@ -68,9 +68,13 @@ public partial class MainViewModel : ObservableObject   // 继承通知基类，
     //照片列表（当前视图下的照片）
     public ObservableCollection<PhotoItemViewModel> Photos { get; } = new();
 
-    //当前选中的照片
+    //当前选中的照片（单选/主选中项，供详情面板显示）
     [ObservableProperty]
     private PhotoItemViewModel? _selectedPhoto;
+
+    //批量选中的照片集合（多选，供批量删除/移动）。
+    //由 View 层的 ListBox 选中变化同步进来（含普通多选与框选）。
+    public ObservableCollection<PhotoItemViewModel> SelectedPhotos { get; } = new();
 
     //三个互斥区域的可见性（界面用 IsVisible 绑定）：
     // 子相册条（相册含子相册时）、照片区、全部相册画廊
@@ -344,6 +348,65 @@ public partial class MainViewModel : ObservableObject   // 继承通知基类，
         }
     }
 
+    //批量删除选中的照片
+    [RelayCommand]
+    private async Task DeleteSelectedPhotosAsync()
+    {
+        if (SelectedPhotos.Count == 0)
+            return;
+
+        bool ok = await _dialog.ConfirmAsync("批量删除", $"确定删除选中的 {SelectedPhotos.Count} 张照片吗？");
+        if (!ok)
+            return;
+
+        //先快照，避免删除过程中集合被改动
+        var targets = SelectedPhotos.ToList();
+        try
+        {
+            using var scope = _scopeFactory.CreateScope();
+            var photos = scope.ServiceProvider.GetRequiredService<PhotoService>();
+            foreach (var p in targets)
+            {
+                await photos.DeletePhotoAsync(p.Id);
+                Photos.Remove(p);
+            }
+
+            SelectedPhotos.Clear();
+            SelectedPhoto = null;
+        }
+        catch (Exception ex)
+        {
+            await _dialog.InfoAsync("批量删除失败", ex.Message);
+        }
+    }
+
+    //批量移动选中的照片到指定相册
+    [RelayCommand]
+    private async Task MoveSelectedPhotosAsync()
+    {
+        if (SelectedPhotos.Count == 0)
+            return;
+
+        List<(long Id, string DisplayName)> albums = BuildAlbumChoices();
+        long? target = await _dialog.PickAlbumAsync("批量移动照片", albums);
+        if (target == null)
+            return;
+
+        try
+        {
+            using var scope = _scopeFactory.CreateScope();
+            var photos = scope.ServiceProvider.GetRequiredService<PhotoService>();
+            foreach (var p in SelectedPhotos.ToList())
+                await photos.MovePhotoAsync(p.Id, target.Value);
+
+            await ReloadCurrentViewAsync();
+        }
+        catch (Exception ex)
+        {
+            await _dialog.InfoAsync("批量移动失败", ex.Message);
+        }
+    }
+
     //移动选中的照片到指定相册
     [RelayCommand]
     private async Task MovePhotoAsync()
@@ -580,6 +643,7 @@ public partial class MainViewModel : ObservableObject   // 继承通知基类，
 
         //先清选中再清集合：避免集合清空时 ListBox 的选中索引越界
         SelectedPhoto = null;
+        SelectedPhotos.Clear();
         Photos.Clear();
         foreach (Photo p in list)
         {
